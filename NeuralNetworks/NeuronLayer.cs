@@ -6,14 +6,14 @@
 public class NeuronLayer
 {
 
-    public NeuronLayer(int neuronNums,double bias,List<double> weights)
+    public NeuronLayer(int neuronNums,double bias)
     {
         this.Bias = bias;
         this.Neurons = new List<Neuron>();
 
         for (int i = 0; i < neuronNums; i++)
         {
-            this.Neurons.Add(new Neuron(bias,weights));
+            this.Neurons.Add(new Neuron(bias));
         }
     }
     public double Bias { get; set; }

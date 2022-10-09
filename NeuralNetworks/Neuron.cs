@@ -6,10 +6,10 @@
 public class Neuron
 {
 
-    public Neuron(double bias,List<double> weights)
+    public Neuron(double bias)
     {
         this.Bias=bias;
-        this.Weights=weights;
+        this.Weights = new List<double>();
     }
     /// <summary>
     /// 截距
@@ -60,7 +60,7 @@ public class Neuron
     /// 计算误差
     /// </summary>
     /// <returns></returns>
-    public double Calculate_Error(double finalResult)
+    public double CalculateError(double finalResult)
     {
         return ((double)1 / 2) * Math.Pow((finalResult - this.Output),2);
     }
