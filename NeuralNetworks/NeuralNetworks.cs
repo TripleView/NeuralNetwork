@@ -21,6 +21,8 @@ public class NeuralNetworks
     public int InputLayerNeuronNums { set; get; }
     public NeuralNetworks(int inputLayerNeuronNums, int hiddenLayerNeuronNums, int outputLayerNeuronNums, double[]? hiddenLayerWeights = null, double[]? outputLayerWeights = null, double? hiddenLayerBias = null, double? outLayerBias = null)
     {
+        CheckWeight(hiddenLayerWeights);
+        CheckWeight(outputLayerWeights);
         this.InputLayerNeuronNums = inputLayerNeuronNums;
         this.HiddenLayer = new NeuronLayer(hiddenLayerNeuronNums, hiddenLayerBias ?? 1);
         this.OutputLayer = new NeuronLayer(outputLayerNeuronNums, outLayerBias ?? 1);
@@ -29,17 +31,40 @@ public class NeuralNetworks
     }
 
     /// <summary>
+    /// 权重不能都是0
+    /// </summary>
+    /// <param name="weights"></param>
+    private void CheckWeight(double[]? weights)
+    {
+        if (weights != null)
+        {
+            var allTrue = true;
+            for (var i = 0; i < weights.Length; i++)
+            {
+                var weight = weights[i];
+                allTrue &= weight == 0;
+            }
+
+            if (allTrue)
+            {
+                throw new Exception("权重不能全部为0");
+            }
+        }
+    }
+
+    /// <summary>
     /// 初始化隐藏层各神经元权重
     /// </summary>
     /// <param name="hiddenLayerWeights"></param>
     private void InitHiddenLayerNeuronWeights(double[] hiddenLayerWeights)
     {
+        var randon = new Random(1);
         var k = 0;
         for (var i = 0; i < this.HiddenLayer.Neurons.Count; i++)
         {
             for (int j = 0; j < InputLayerNeuronNums; j++)
             {
-                var value = hiddenLayerWeights != null ? hiddenLayerWeights[k] : 0;
+                var value = hiddenLayerWeights != null ? hiddenLayerWeights[k] : randon.NextDouble();
                 this.HiddenLayer.Neurons[i].Weights.Add(value);
                 k++;
             }
@@ -52,12 +77,14 @@ public class NeuralNetworks
     /// <param name="hiddenLayerWeights"></param>
     private void InitOutputLayerNeuronWeights(double[] outputLayerWeights)
     {
+        var randon = new Random(1);
         var k = 0;
         for (var i = 0; i < this.OutputLayer.Neurons.Count; i++)
         {
             for (int j = 0; j < this.HiddenLayer.Neurons.Count; j++)
             {
-                var value = outputLayerWeights != null ? outputLayerWeights[k] : 0;
+                //权重必须在(0,1)之间
+                var value = outputLayerWeights != null ? outputLayerWeights[k] : randon.NextDouble();
                 this.OutputLayer.Neurons[i].Weights.Add(value);
                 k++;
             }
@@ -74,13 +101,13 @@ public class NeuralNetworks
         return outputLayerOutput;
     }
 
-    public double CalculateTotalError(double[] inputs,double[] outputs)
+    public double CalculateTotalError(double[] inputs, double[] outputs)
     {
         this.FeedForward(inputs);
         var result = 0d;
         for (var i = 0; i < outputs.Length; i++)
         {
-            var error=this.OutputLayer.Neurons[i].CalculateError(outputs[i]);
+            var error = this.OutputLayer.Neurons[i].CalculateError(outputs[i]);
             result += error;
         }
 
@@ -91,8 +118,8 @@ public class NeuralNetworks
     {
         this.FeedForward(inputs);
         //输出层部分，误差对net求导
-        var outputNeuronsCount= this.OutputLayer.Neurons.Count;
-        var outputError2NetQd= Enumerable.Range(0, outputNeuronsCount).Select(it => 0d).ToList();
+        var outputNeuronsCount = this.OutputLayer.Neurons.Count;
+        var outputError2NetQd = Enumerable.Range(0, outputNeuronsCount).Select(it => 0d).ToList();
         for (int i = 0; i < outputNeuronsCount; i++)
         {
             outputError2NetQd[i] = this.OutputLayer.Neurons[i].Qd_error2Net(outputs[i]);
@@ -101,7 +128,7 @@ public class NeuralNetworks
         //隐含层部分，误差对out求导
         var hiddenLayerNeuronsCount = this.HiddenLayer.Neurons.Count;
         var hiddenError2outQd = Enumerable.Range(0, hiddenLayerNeuronsCount).Select(it => 0d).ToList();
-        
+
         for (int i = 0; i < hiddenLayerNeuronsCount; i++)
         {
             double tempQd = 0;
