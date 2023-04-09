@@ -19,6 +19,8 @@ public class Neuron
     /// 权重列表
     /// </summary>
     public List<double> Weights { get; set; }
+
+    public List<double> WeightQd { get; set; }
     /// <summary>
     /// 输入列表
     /// </summary>
@@ -94,13 +96,34 @@ public class Neuron
         return -(errorValue - this.Output);
     }
 
+
+    
     /// <summary>
-    /// 误差对net求导
+    /// 误差对权重求导
     /// </summary>
     /// <param name="errorValue"></param>
     /// <returns></returns>
-    public double Qd_error2Net(double errorValue)
+    public double Qd_error2Weight(double errorValue,int index)
     {
-        return Qd_Error2Out(errorValue) * Qd_Out2Net();
+        return Qd_Error2Out(errorValue) * QdOutToWeight(index);
+    }
+
+    /// <summary>
+    /// 误差对权重求导
+    /// </summary>
+    /// <param name="errorValue"></param>
+    /// <returns></returns>
+    public double QdError2Input(double errorValue, int index)
+    {
+        return Qd_Error2Out(errorValue) * QdOutToInput(index);
+    }
+    public double QdOutToWeight(int index)
+    {
+       return this.Qd_Out2Net() * this.Inputs[index];
+    }
+
+    public double QdOutToInput(int index)
+    {
+        return this.Qd_Out2Net() * this.Weights[index];
     }
 }
