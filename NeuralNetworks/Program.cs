@@ -16,12 +16,12 @@
             //var c= nn.FeedForward(new double[] { 0.01, 0.1 });
 
             var nn = new NeuralNetworks(2, 5, 1);
-            nn.Train(new[] { 0.05, 0.1 }, new[] { 0.01, 0.09 });
-            var data = new List<double[]> { new Double[] { 1, 1 }, new Double[] { 1, 0 }, new Double[] { 0, 1 }, new Double[] { 0, 0 } };
-            var re = new double[] { 0, 1, 1, 0 };
+            //nn.Train(new[] { 0.05, 0.1 }, new[] { 0.01, 0.09 });
+            //var data = new List<double[]> { new Double[] { 1, 1 }, new Double[] { 1, 0 }, new Double[] { 0, 1 }, new Double[] { 0, 0 } };
+            //var re = new double[] { 0, 1, 1, 0 };
             //nn.Train(new double[] { 0, 0 }, new[] { 0d });
             //Console.WriteLine(nn.CalculateTotalError(new double[] { 0, 0 }, new[] { 0d }));
-            for (int i = 0; i < 100000; i++)
+            for (int i = 0; i < 10000000; i++)
             {
                 nn.Train(new double[] { 1, 1 }, new[] { 0d });
                 nn.Train(new double[] { 1, 0 }, new[] { 1d });
