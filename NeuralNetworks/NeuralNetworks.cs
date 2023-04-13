@@ -5,10 +5,8 @@
 /// </summary>
 public class NeuralNetworks
 {
-    /// <summary>
-    /// 隐藏层
-    /// </summary>
-    public NeuronLayer HiddenLayer { set; get; }
+
+    public List<NeuronLayer> HiddenLayers { get; set; }
     /// <summary>
     /// 输出层
     /// </summary>
@@ -16,18 +14,18 @@ public class NeuralNetworks
     /// <summary>
     /// 学习率
     /// </summary>
-    public double LearningRate { get; set; } = 0.5;
+    public double LearningRate { get; set; } = 0.1;
 
     public int InputLayerNeuronNums { set; get; }
-    public NeuralNetworks(int inputLayerNeuronNums, int hiddenLayerNeuronNums, int outputLayerNeuronNums, double[]? hiddenLayerWeights = null, double[]? outputLayerWeights = null, double? hiddenLayerBias = null, double? outLayerBias = null)
+
+
+    public NeuralNetworks(int inputLayerNeuronNums, int hiddenLayerNeuronNums, int outputLayerNeuronNums, int hiddenLayerNums = 1, double? hiddenLayerBias = null, double? outLayerBias = null)
     {
-        CheckWeight(hiddenLayerWeights);
-        CheckWeight(outputLayerWeights);
         this.InputLayerNeuronNums = inputLayerNeuronNums;
-        this.HiddenLayer = new NeuronLayer(hiddenLayerNeuronNums, hiddenLayerBias ?? 1);
-        this.OutputLayer = new NeuronLayer(outputLayerNeuronNums, outLayerBias ?? 1);
-        InitHiddenLayerNeuronWeights(hiddenLayerWeights);
-        InitOutputLayerNeuronWeights(outputLayerWeights);
+
+        InitHiddenLayers(hiddenLayerNums, hiddenLayerNeuronNums, hiddenLayerBias);
+
+        InitOutputLayer(outputLayerNeuronNums, outLayerBias);
     }
 
     /// <summary>
@@ -52,54 +50,76 @@ public class NeuralNetworks
         }
     }
 
+
+
     /// <summary>
-    /// 初始化隐藏层各神经元权重
+    /// 初始化隐藏层
     /// </summary>
     /// <param name="hiddenLayerWeights"></param>
-    private void InitHiddenLayerNeuronWeights(double[] hiddenLayerWeights)
+    private void InitHiddenLayers(int hiddenLayerNums, int hiddenLayerNeuronNums, double? hiddenLayerBias = null)
     {
+        this.HiddenLayers = new List<NeuronLayer>();
         var randon = new Random(1);
-        var k = 0;
-        for (var i = 0; i < this.HiddenLayer.Neurons.Count; i++)
+        var previewLayerNeuronNums = InputLayerNeuronNums;
+        for (int x = 0; x < hiddenLayerNums; x++)
         {
-            for (int j = 0; j < InputLayerNeuronNums; j++)
+            var hiddenLayer = new NeuronLayer(hiddenLayerNeuronNums, hiddenLayerBias.GetValueOrDefault(0), NeuronLayerType.隐含层);
+
+            for (var i = 0; i < hiddenLayer.Neurons.Count; i++)
             {
-                var value = hiddenLayerWeights != null ? hiddenLayerWeights[k] : randon.NextDouble();
-                this.HiddenLayer.Neurons[i].Weights.Add(value);
-                this.HiddenLayer.Neurons[i].WeightQdValues.Add(0d);
-                k++;
+                for (int j = 0; j < previewLayerNeuronNums; j++)
+                {
+                    var value = randon.NextDouble();
+                    hiddenLayer.Neurons[i].Weights.Add(value);
+                    hiddenLayer.Neurons[i].WeightQdValues.Add(0d);
+                    hiddenLayer.Neurons[i].InputQdValues.Add(0d);
+
+
+                }
             }
+            this.HiddenLayers.Add(hiddenLayer);
+            previewLayerNeuronNums = hiddenLayer.Neurons.Count;
         }
+
+
     }
 
     /// <summary>
-    /// 初始化输出层各神经元权重
+    /// 初始化输出层
     /// </summary>
-    /// <param name="hiddenLayerWeights"></param>
-    private void InitOutputLayerNeuronWeights(double[] outputLayerWeights)
+    /// <param name="outputLayerNeuronNums"></param>
+    private void InitOutputLayer(int outputLayerNeuronNums, double? outLayerBias)
     {
+        this.OutputLayer = new NeuronLayer(outputLayerNeuronNums, outLayerBias ?? 0);
         var randon = new Random(1);
         var k = 0;
         for (var i = 0; i < this.OutputLayer.Neurons.Count; i++)
         {
-            for (int j = 0; j < this.HiddenLayer.Neurons.Count; j++)
+            for (int j = 0; j < this.HiddenLayers.Last().Neurons.Count; j++)
             {
                 //权重必须在(0,1)之间
-                var value = outputLayerWeights != null ? outputLayerWeights[k] : randon.NextDouble();
+                var value = randon.NextDouble();
                 this.OutputLayer.Neurons[i].Weights.Add(value);
                 this.OutputLayer.Neurons[i].WeightQdValues.Add(0d);
-                    k++;
+                k++;
             }
         }
     }
-
     /// <summary>
     /// 正向传播
     /// </summary>
     public List<double> FeedForward(double[] inputs)
     {
-        var hiddenLayerOutput = this.HiddenLayer.FeedForward(inputs.ToList());
-        var outputLayerOutput = this.OutputLayer.FeedForward(hiddenLayerOutput);
+        var lastInputs = inputs.ToList();
+        for (int i = 0; i < this.HiddenLayers.Count; i++)
+        {
+            var hiddenLayer = this.HiddenLayers[i];
+
+            var hiddenLayerOutputs = hiddenLayer.FeedForward(lastInputs);
+            lastInputs = hiddenLayerOutputs;
+        }
+
+        var outputLayerOutput = this.OutputLayer.FeedForward(lastInputs);
         return outputLayerOutput;
     }
 
@@ -131,24 +151,55 @@ public class NeuralNetworks
             for (int j = 0; j < this.OutputLayer.Neurons[i].Weights.Count; j++)
             {
                 this.OutputLayer.Neurons[i].QdError2Weight(outputs[i], j);
+                this.OutputLayer.Neurons[i].QdError2Bias(outputs[i]);
             }
 
         }
 
-        var hiddenCount = this.HiddenLayer.Neurons.Count;
-        for (int i = 0; i < hiddenCount; i++)
+        NeuronLayer previewLayer = new NeuronLayer(1, 1);
+        for (int x = this.HiddenLayers.Count - 1; x >= 0; x--)
         {
-            var all = 0d;
-            for (int j = 0; j < outCount; j++)
+            var hiddenLayer = this.HiddenLayers[x];
+            var hiddenNeuronCount = hiddenLayer.Neurons.Count;
+            for (int i = 0; i < hiddenNeuronCount; i++)
             {
-                all += this.OutputLayer.Neurons[j].QdError2Input(outputs[j], i);
+                if (x == this.HiddenLayers.Count - 1)
+                {
+                    var all = 0d;
+                    for (int j = 0; j < outCount; j++)
+                    {
+                        all += this.OutputLayer.Neurons[j].QdError2Input(outputs[j], i);
+                    }
+
+                    for (int k = 0; k < hiddenLayer.Neurons[i].Weights.Count; k++)
+                    {
+                        hiddenLayer.Neurons[i].WeightQdValues[k] = all * hiddenLayer.Neurons[i].QdOutToWeight(k);
+                        hiddenLayer.Neurons[i].InputQdValues[k] = all * hiddenLayer.Neurons[i].QdOutToInput(k);
+                        hiddenLayer.Neurons[i].BiasQdValue = all * hiddenLayer.Neurons[i].Qd_Out2Net();
+                    }
+                }
+                else
+                {
+                    var all = 0d;
+                    var previewNeuronCount = previewLayer.Neurons.Count;
+                    for (int j = 0; j < previewNeuronCount; j++)
+                    {
+                        all += previewLayer.Neurons[j].InputQdValues[i];
+                    }
+
+                    for (int k = 0; k < hiddenLayer.Neurons[i].Weights.Count; k++)
+                    {
+                        hiddenLayer.Neurons[i].WeightQdValues[k] = all * hiddenLayer.Neurons[i].QdOutToWeight(k);
+                        hiddenLayer.Neurons[i].InputQdValues[k] = all * hiddenLayer.Neurons[i].QdOutToInput(k);
+                        hiddenLayer.Neurons[i].BiasQdValue = all * hiddenLayer.Neurons[i].Qd_Out2Net();
+                    }
+                }
+
             }
 
-            for (int k = 0; k <  this.HiddenLayer.Neurons[i].Weights.Count; k++)
-            {
-                this.HiddenLayer.Neurons[i].WeightQdValues[k] = all * this.HiddenLayer.Neurons[i].QdOutToWeight(k);
-            }
+            previewLayer = hiddenLayer;
         }
+
 
         //更新输出层
         for (int i = 0; i < outCount; i++)
@@ -158,61 +209,27 @@ public class NeuralNetworks
                 this.OutputLayer.Neurons[i].Weights[j] -=
                     this.LearningRate * this.OutputLayer.Neurons[i].WeightQdValues[j];
             }
+            this.OutputLayer.Neurons[i].Bias -= this.LearningRate * this.OutputLayer.Neurons[i].BiasQdValue;
         }
 
         ////更新隐含层
-        for (int i = 0; i < hiddenCount; i++)
+        for (int x = this.HiddenLayers.Count - 1; x >= 0; x--)
         {
-            for (int j = 0; j < this.HiddenLayer.Neurons[i].Weights.Count; j++)
+            var hiddenLayer = this.HiddenLayers[x];
+            var hiddenCount = hiddenLayer.Neurons.Count;
+            for (int i = 0; i < hiddenCount; i++)
             {
-                this.HiddenLayer.Neurons[i].Weights[j] -= this.LearningRate * this.HiddenLayer.Neurons[i].WeightQdValues[j];
+                for (int j = 0; j < hiddenLayer.Neurons[i].Weights.Count; j++)
+                {
+                    hiddenLayer.Neurons[i].Weights[j] -= this.LearningRate * hiddenLayer.Neurons[i].WeightQdValues[j];
+                }
+                hiddenLayer.Neurons[i].Bias -= this.LearningRate * hiddenLayer.Neurons[i].BiasQdValue;
             }
+
         }
 
-        ////输出层部分，误差对net求导
-        //var outputNeuronsCount = this.OutputLayer.Neurons.Count;
-        //var outputError2NetQd = Enumerable.Range(0, outputNeuronsCount).Select(it => 0d).ToList();
-        //for (int i = 0; i < outputNeuronsCount; i++)
-        //{
-        //    outputError2NetQd[i] = this.OutputLayer.Neurons[i].Qd_error2Net(outputs[i]);
-        //}
 
 
-        ////隐含层部分，误差对out求导
-        //var hiddenLayerNeuronsCount = this.HiddenLayer.Neurons.Count;
-        //var hiddenError2outQd = Enumerable.Range(0, hiddenLayerNeuronsCount).Select(it => 0d).ToList();
 
-        //for (int i = 0; i < hiddenLayerNeuronsCount; i++)
-        //{
-        //    double tempQd = 0;
-        //    for (int j = 0; j < outputNeuronsCount; j++)
-        //    {
-        //        tempQd += outputError2NetQd[j] * this.OutputLayer.Neurons[j].Weights[i];
-        //    }
-
-        //    hiddenError2outQd[i] = tempQd * this.HiddenLayer.Neurons[i].Qd_Out2Net();
-        //}
-
-        //更新输出层
-        //for (int i = 0; i < outputNeuronsCount; i++)
-        //{
-        //    for (int j = 0; j < this.OutputLayer.Neurons[i].Weights.Count; j++)
-        //    {
-        //        this.OutputLayer.Neurons[i].Weights[j] -= this.LearningRate *
-        //                                                  (outputError2NetQd[i] * this.OutputLayer.Neurons[i]
-        //                                                      .Qd_Net2Weight(j));
-        //    }
-        //}
-
-        ////更新隐含层
-        //for (int i = 0; i < hiddenLayerNeuronsCount; i++)
-        //{
-        //    for (int j = 0; j < this.HiddenLayer.Neurons[i].Weights.Count; j++)
-        //    {
-        //        this.HiddenLayer.Neurons[i].Weights[j] -= this.LearningRate *
-        //                                                  (hiddenError2outQd[i] * this.HiddenLayer.Neurons[i]
-        //                                                      .Qd_Net2Weight(j));
-        //    }
-        //}
     }
 }

@@ -1,22 +1,26 @@
 ﻿namespace NeuralNetworks;
 
+public enum NeuronLayerType
+{
+    隐含层=1,
+    输出层=2
+}
+
 /// <summary>
 /// 神经网络层
 /// </summary>
 public class NeuronLayer
 {
-
-    public NeuronLayer(int neuronNums,double bias)
+    public NeuronLayerType LayerType { get; set; }
+    public NeuronLayer(int neuronNums,double bias, NeuronLayerType layerType= NeuronLayerType.隐含层)
     {
-        this.Bias = bias;
         this.Neurons = new List<Neuron>();
-
+        this.LayerType = layerType;
         for (int i = 0; i < neuronNums; i++)
         {
             this.Neurons.Add(new Neuron(bias));
         }
     }
-    public double Bias { get; set; }
     /// <summary>
     /// 神经元
     /// </summary>
